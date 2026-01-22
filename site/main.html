@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexora - Games & Movies</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* --- CORE STYLES --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Barlow", sans-serif;
+            background-color: #0A1038;
+            color: #ffffff;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #particle-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+        }
+
+        /* --- SETUP WIZARD --- */
+        #setup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0A1038; z-index: 5000; display: flex;
+            justify-content: center; align-items: center;
+        }
+        .setup-card {
+            background: #0A135C; padding: 40px; border-radius: 20px;
+            border: 2px solid #1B2CC2; width: 450px; text-align: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        .setup-step { display: none; }
+        .setup-step.active { display: block; }
+        .icon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .icon-opt { 
+            padding: 10px; border: 1px solid #1B2CC2; border-radius: 10px; 
+            cursor: pointer; transition: 0.3s; font-size: 24px;
+        }
+        .icon-opt:hover, .icon-opt.selected { background: #4F64FF; border-color: #fff; }
+        .setup-input {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #1B2CC2;
+            background: #050a2d; color: white; margin: 15px 0; outline: none;
+        }
+        .setup-btn {
+            background: #4F64FF; color: white; border: none; padding: 10px 25px;
+            border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 70px; height: 100%; background-color: #0A135C;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px 0; z-index: 10; border-right: 1px solid #1B2CC2;
+        }
+        .nav-item {
+            width: 40px; height: 40px; display: flex; justify-content: center;
+            align-items: center; border-radius: 12px; margin-bottom: 15px;
+            color: #888; cursor: pointer; transition: 0.3s; font-size: 18px;
+        }
+        .nav-item:hover, .nav-item.active { background-color: #1B2CC2; color: #fff; }
+        .spacer { flex-grow: 1; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { flex-grow: 1; position: relative; z-index: 5; padding: 20px; overflow-y: auto; }
+        .view-section { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; animation: fadeIn 0.5s; }
+        .view-section.active-view { display: flex; }
+
+        /* --- GRID STYLES --- */
+        .grid-container { width: 90%; max-width: 1400px; padding-top: 20px; }
+        .grid-title { font-size: 2rem; margin-bottom: 25px; border-bottom: 2px solid #1B2CC2; width: 100%; padding-bottom: 10px; }
+        .grid-wrapper { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; }
+        
+        .card {
+            background-color: #0A135C; border-radius: 15px; overflow: hidden;
+            border: 1px solid #1B2CC2; position: relative; cursor: pointer; transition: 0.3s;
+        }
+        .card:hover { transform: translateY(-5px); border-color: #4F64FF; box-shadow: 0 10px 30px rgba(79, 100, 255, 0.3); }
+        .card-image { width: 100%; aspect-ratio: 2 / 1; object-fit: cover; opacity: 0.7; transition: 0.3s; }
+        .card:hover .card-image { opacity: 1; }
+        .card-info { padding: 15px; position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, #0A135C); }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.9); z-index: 1000; display: none;
+            justify-content: center; align-items: center; backdrop-filter: blur(8px);
+        }
+        .modal-window {
+            width: 75vw; height: 75vh; background: #000; border: 2px solid #4F64FF;
+            border-radius: 15px; position: relative; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .close-btn {
+            position: absolute; top: 15px; right: 15px; background: #ff3333;
+            color: #fff; border: none; width: 35px; height: 35px; border-radius: 50%;
+            cursor: pointer; z-index: 1100; font-weight: bold;
+        }
+
+        /* --- VIDEO PLAYER --- */
+        .video-container { width: 100%; height: 100%; position: relative; background: #000; }
+        video { width: 100%; height: 100%; }
+        .video-controls {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(10, 19, 92, 0.9); padding: 10px 20px;
+            display: flex; align-items: center; gap: 15px;
+            transform: translateY(100%); transition: 0.3s; z-index: 10;
+        }
+        .video-container:hover .video-controls { transform: translateY(0); }
+        .control-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
+        .slider { flex-grow: 1; cursor: pointer; accent-color: #4F64FF; }
+        .vol-slider { width: 80px; accent-color: #4F64FF; }
+
+        iframe { width: 100%; height: 100%; border: none; overflow: hidden; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="setup-overlay">
+        <div class="setup-card">
+            <div id="step-1" class="setup-step active">
+                <h3>Choose a Cloak Icon</h3>
+                <div class="icon-grid">
+                    <div class="icon-opt" onclick="selIcon(this, 'https://google.com/favicon.ico')"><i class="fab fa-google"></i></div>
+                    <div class="icon-opt" onclick="selIcon(this, 'https://drive.google.com/favicon.ico')"><i class="fab fa-google-drive"></i></div>
+                    <div class="icon-opt" onclick="selIcon(this, 'https://classroom.google.com/favicon.ico')"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="icon-opt" onclick="selIcon(this, 'https://clever.com/favicon.ico')"><i class="fas fa-infinity"></i></div>
+                    <div class="icon-opt" onclick="selIcon(this, 'https://canvas.instructure.com/favicon.ico')"><i class="fas fa-book"></i></div>
+                    <div class="icon-opt" onclick="selIcon(this, 'https://wikipedia.org/favicon.ico')"><i class="fab fa-wikipedia-w"></i></div>
+                </div>
+                <button class="setup-btn" onclick="nextStep(2)">Next</button>
+            </div>
+            <div id="step-2" class="setup-step">
+                <h3>Tab Title Cloak</h3>
+                <input type="text" id="cloak-text" class="setup-input" placeholder="e.g. My Drive - Google">
+                <button class="setup-btn" onclick="nextStep(3)">Next</button>
+            </div>
+            <div id="step-3" class="setup-step">
+                <h3>Panic Settings</h3>
+                <p style="font-size: 12px; margin-bottom: 10px;">Select redirect site:</p>
+                <select id="panic-url" class="setup-input">
+                    <option value="https://clever.com">Clever</option>
+                    <option value="https://classroom.google.com">Google Classroom</option>
+                    <option value="https://khanacademy.org">Khan Academy</option>
+                    <option value="https://ixl.com">IXL</option>
+                    <option value="https://aleks.com">ALEKS</option>
+                </select>
+                <p style="font-size: 12px;">Bind: [SHIFT] + Key</p>
+                <input type="text" id="panic-key" class="setup-input" maxlength="1" placeholder="Type a letter (e.g. P)">
+                <button class="setup-btn" onclick="finishSetup()">Submit & Save</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <nav class="sidebar">
+        <div class="nav-item active" id="btn-home" onclick="switchTab('home')"><i class="fas fa-home"></i></div>
+        <div class="nav-item" id="btn-games" onclick="switchTab('games')"><i class="fas fa-gamepad"></i></div>
+        <div class="nav-item" id="btn-movies" onclick="switchTab('movies')"><i class="fas fa-film"></i></div>
+        <div class="spacer"></div>
+        <div class="nav-item" onclick="localStorage.clear(); location.reload();"><i class="fas fa-sync"></i></div>
+    </nav>
+
+    <main class="main-content">
+        <div id="view-home" class="view-section active-view">
+            <h1 style="font-size: 4rem; color: #4F64FF; margin-top: 20vh; text-shadow: 0 0 20px rgba(0,0,225,0.5);">Brix</h1>
+            <p style="color: #ccc;">The New and Improved.</p>
+        </div>
+
+        <div id="view-games" class="view-section">
+            <div class="grid-container">
+                <h2 class="grid-title">Game Library</h2>
+                <div class="grid-wrapper">
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/retrobowl.html')">
+                        <img src="https://picsum.photos/600/300?random=11" class="card-image">
+                        <div class="card-info"><b>Retro Bowl</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/slope.html')">
+                        <img src="https://picsum.photos/600/300?random=12" class="card-image">
+                        <div class="card-info"><b>Slope</b></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-movies" class="view-section">
+            <div class="grid-container">
+                <h2 class="grid-title">Movie Library</h2>
+                <div class="grid-wrapper">
+                    <div class="card" onclick="launchMovie('https://github.com/intel-iot-devkit/sample-videos/raw/master/classroom.mp4')">
+                        <img src="https://picsum.photos/600/300?random=20" class="card-image">
+                        <div class="card-info"><b>Sample Movie 1</b></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-window">
+            <button class="close-btn" onclick="closeAll()">X</button>
+            <div id="modal-body" style="width:100%; height:100%;"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- SETUP LOGIC ---
+        let selectedFavicon = '';
+        if(localStorage.getItem('brix-setup')) {
+            document.getElementById('setup-overlay').style.display = 'none';
+            applyCloak();
+        }
+
+        function selIcon(el, url) {
+            document.querySelectorAll('.icon-opt').forEach(i => i.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedFavicon = url;
+        }
+
+        function nextStep(step) {
+            document.querySelectorAll('.setup-step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step-' + step).classList.add('active');
+        }
+
+        function finishSetup() {
+            const data = {
+                icon: selectedFavicon || 'https://google.com/favicon.ico',
+                title: document.getElementById('cloak-text').value || 'Classes',
+                panicUrl: document.getElementById('panic-url').value,
+                panicKey: document.getElementById('panic-key').value.toUpperCase() || 'P'
+            };
+            localStorage.setItem('brix-setup', JSON.stringify(data));
+            document.getElementById('setup-overlay').style.display = 'none';
+            applyCloak();
+        }
+
+        function applyCloak() {
+            const data = JSON.parse(localStorage.getItem('brix-setup'));
+            document.title = data.title;
+            let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+            link.type = 'image/x-icon'; link.rel = 'shortcut icon'; link.href = data.icon;
+            document.getElementsByTagName('head')[0].appendChild(link);
+            
+            window.addEventListener('keydown', (e) => {
+                if(e.shiftKey && e.key.toUpperCase() === data.panicKey) {
+                    window.location.href = data.panicUrl;
+                }
+            });
+        }
+
+        // --- NAVIGATION ---
+        function switchTab(tab) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active-view'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('view-' + tab).classList.add('active-view');
+            document.getElementById('btn-' + tab).classList.add('active');
+        }
+
+        const modal = document.getElementById('modal-overlay');
+        const body = document.getElementById('modal-body');
+
+        // --- GAME LAUNCHER (FIT TO WINDOW) ---
+        function launchGame(targetUrl) {
+            modal.style.display = 'flex';
+            const iframe = document.createElement('iframe');
+            
+            const loadingHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { background: #000; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+                        #game-frame { width: 100%; height: 100%; border: none; }
+                    </style>
+                </head>
+                <body>
+                    <div id="loader">Loading Game Engine...</div>
+                    <script>
+                        (async () => {
+                            try {
+                                const response = await fetch("${targetUrl}");
+                                let html = await response.text();
+                                const baseUrl = "${targetUrl}".substring(0, "${targetUrl}".lastIndexOf("/") + 1);
+                                
+                                // Auto-fit CSS Injection
+                                const fitStyle = \`
+                                    <style>
+                                        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; display:flex; justify-content:center; align-items:center; background:#000; }
+                                        canvas, iframe, embed { max-width: 100vw !important; max-height: 100vh !important; object-fit: contain !important; }
+                                    </style>
+                                \`;
+
+                                html = html.replace("<head>", '<head><base href="' + baseUrl + '">' + fitStyle);
+                                document.open();
+                                document.write(html);
+                                document.close();
+                            } catch (err) {
+                                document.body.innerHTML = "Resource Blocked.";
+                            }
+                        })();
+                    <\/script>
+                </body>
+                </html>
+            `;
+            
+            iframe.srcdoc = loadingHTML;
+            body.appendChild(iframe);
+        }
+
+        // --- MOVIE LAUNCHER ---
+        function launchMovie(url) {
+            modal.style.display = 'flex';
+            body.innerHTML = `
+                <div class="video-container">
+                    <video id="main-video" src="${url}"></video>
+                    <div class="video-controls">
+                        <button class="control-btn" onclick="togglePlay()"><i id="play-icon" class="fas fa-play"></i></button>
+                        <input type="range" id="seek-slider" class="slider" value="0" min="0" step="0.1">
+                        <input type="range" id="volume-slider" class="vol-slider" value="1" min="0" max="1" step="0.1">
+                    </div>
+                </div>
+            `;
+            const v = document.getElementById('main-video');
+            const seek = document.getElementById('seek-slider');
+            v.ontimeupdate = () => { if(!v.paused) seek.value = (v.currentTime / v.duration) * 100; };
+            seek.oninput = () => { v.currentTime = (seek.value / 100) * v.duration; };
+            v.play();
+            document.getElementById('play-icon').className = "fas fa-pause";
+        }
+
+        function togglePlay() {
+            const v = document.getElementById('main-video');
+            const icon = document.getElementById('play-icon');
+            if (v.paused) { v.play(); icon.className = "fas fa-pause"; }
+            else { v.pause(); icon.className = "fas fa-play"; }
+        }
+
+        function closeAll() {
+            modal.style.display = 'none';
+            body.innerHTML = '';
+        }
+
+        // --- PARTICLES ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let pts = [];
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.onresize = resize; resize();
+        class Particle {
+            constructor() { this.reset(); }
+            reset() { this.x = Math.random()*canvas.width; this.y = Math.random()*canvas.height; this.vx = (Math.random()-0.5)*0.3; this.vy = (Math.random()-0.5)*0.3; this.s = Math.random()*2; }
+            up() { this.x+=this.vx; this.y+=this.vy; if(this.x<0)this.x=canvas.width; if(this.y<0)this.y=canvas.height; if(this.x>canvas.width)this.x=0; if(this.y>canvas.height)this.y=0; }
+            dr() { ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,6.28); ctx.fill(); }
+        }
+        for(let i=0; i<100; i++) pts.push(new Particle());
+        function anim() { ctx.clearRect(0,0,canvas.width,canvas.height); pts.forEach(p=>{p.up(); p.dr();}); requestAnimationFrame(anim); }
+        anim();
+    </script>
+</body>
+</html>
