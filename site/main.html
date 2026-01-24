@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loading...</title>
+    <title>Nexora - Entertainment</title>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -81,7 +81,7 @@
             border: 1px solid #1B2CC2; position: relative; cursor: pointer; transition: 0.3s;
         }
         .card:hover { transform: translateY(-5px); border-color: #4F64FF; box-shadow: 0 10px 30px rgba(79, 100, 255, 0.3); }
-        .card-image { width: 100%; aspect-ratio: 2 / 1; object-fit: cover; opacity: 0.7; transition: 0.3s; }
+        .card-image { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; opacity: 0.7; transition: 0.3s; }
         .card:hover .card-image { opacity: 1; }
         .card-info { padding: 15px; position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, #0A135C); }
 
@@ -92,30 +92,58 @@
             justify-content: center; align-items: center; backdrop-filter: blur(8px);
         }
         .modal-window {
-            width: 75vw; height: 75vh; background: #000; border: 2px solid #4F64FF;
+            width: 85vw; height: 85vh; background: #000; border: 2px solid #4F64FF;
             border-radius: 15px; position: relative; overflow: hidden; display: flex; flex-direction: column;
         }
-        .close-btn {
-            position: absolute; top: 15px; right: 15px; background: #ff3333;
-            color: #fff; border: none; width: 35px; height: 35px; border-radius: 50%;
-            cursor: pointer; z-index: 1100; font-weight: bold;
+        
+        .window-controls {
+            position: absolute; top: 15px; right: 15px; z-index: 1100; display: flex; gap: 10px;
         }
-
-        /* --- VIDEO PLAYER --- */
-        .video-container { width: 100%; height: 100%; position: relative; background: #000; }
-        video { width: 100%; height: 100%; }
-        .video-controls {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: rgba(10, 19, 92, 0.9); padding: 10px 20px;
-            display: flex; align-items: center; gap: 15px;
-            transform: translateY(100%); transition: 0.3s; z-index: 10;
+        .win-btn {
+            width: 35px; height: 35px; border-radius: 50%; border: none;
+            color: #fff; cursor: pointer; font-weight: bold; display: flex; 
+            justify-content: center; align-items: center; font-size: 1rem;
         }
-        .video-container:hover .video-controls { transform: translateY(0); }
-        .control-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
-        .slider { flex-grow: 1; cursor: pointer; accent-color: #4F64FF; }
-        .vol-slider { width: 80px; accent-color: #4F64FF; }
+        .close-btn { background: #ff3333; }
+        .min-btn { background: #ffcc00; color: #000; }
 
-        iframe { width: 100%; height: 100%; border: none; overflow: hidden; }
+        /* --- ALBUM MODAL --- */
+        .album-view { display: flex; height: 100%; width: 100%; background: linear-gradient(135deg, #0A135C, #000); }
+        .album-art-large { width: 40%; background-size: cover; background-position: center; border-right: 2px solid #1B2CC2; }
+        .album-tracks { width: 60%; padding: 20px; overflow-y: auto; color: white; }
+        .track-item { 
+            padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); 
+            cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between;
+        }
+        .track-item:hover { background: rgba(255,255,255,0.1); color: #4F64FF; }
+
+        /* --- MINI PLAYER --- */
+        #mini-player {
+            position: fixed; bottom: 20px; left: 90px; z-index: 2000;
+            width: 120px; height: 120px; border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            overflow: hidden; display: none;
+            border: 2px solid #1B2CC2;
+            background-size: cover; background-position: center;
+        }
+        .mini-controls {
+            width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        #mini-player:hover .mini-controls { opacity: 1; }
+        .mini-btn-row { display: flex; gap: 15px; margin-top: 5px; }
+        .mini-btn { color: white; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
+
+        /* --- SLOPE FIX: FORCE FULLSCREEN --- */
+        .game-iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            display: block;
+            /* Aggressive scaling if the game tries to be small */
+            object-fit: fill;
+        }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -143,16 +171,12 @@
             </div>
             <div id="step-3" class="setup-step">
                 <h3>Panic Settings</h3>
-                <p style="font-size: 12px; margin-bottom: 10px;">Select redirect site:</p>
                 <select id="panic-url" class="setup-input">
                     <option value="https://clever.com">Clever</option>
                     <option value="https://classroom.google.com">Google Classroom</option>
                     <option value="https://khanacademy.org">Khan Academy</option>
-                    <option value="https://ixl.com">IXL</option>
-                    <option value="https://aleks.com">ALEKS</option>
                 </select>
-                <p style="font-size: 12px;">Bind: [SHIFT] + Key</p>
-                <input type="text" id="panic-key" class="setup-input" maxlength="1" placeholder="Type a letter (e.g. P)">
+                <input type="text" id="panic-key" class="setup-input" maxlength="1" placeholder="Panic Key (e.g. P)">
                 <button class="setup-btn" onclick="finishSetup()">Submit & Save</button>
             </div>
         </div>
@@ -163,14 +187,25 @@
     <nav class="sidebar">
         <div class="nav-item active" id="btn-home" onclick="switchTab('home')"><i class="fas fa-home"></i></div>
         <div class="nav-item" id="btn-games" onclick="switchTab('games')"><i class="fas fa-gamepad"></i></div>
-        <div class="nav-item" id="btn-movies" onclick="switchTab('movies')"><i class="fas fa-film"></i></div>
+        <div class="nav-item" id="btn-music" onclick="switchTab('music')"><i class="fas fa-music"></i></div>
         <div class="spacer"></div>
         <div class="nav-item" onclick="localStorage.clear(); location.reload();"><i class="fas fa-sync"></i></div>
     </nav>
 
+    <div id="mini-player">
+        <div class="mini-controls">
+            <div style="font-size: 10px; margin-bottom: 5px;">NOW PLAYING</div>
+            <div class="mini-btn-row">
+                <i class="fas fa-backward mini-btn" onclick="prevSong()"></i>
+                <i id="mini-play-btn" class="fas fa-pause mini-btn" onclick="toggleMusic()"></i>
+                <i class="fas fa-forward mini-btn" onclick="nextSong()"></i>
+            </div>
+        </div>
+    </div>
+
     <main class="main-content">
         <div id="view-home" class="view-section active-view">
-            <h1 style="font-size: 4rem; color: #4F64FF; margin-top: 20vh; text-shadow: 0 0 20px rgba(0,0,225,0.5);">Brix</h1>
+            <h1 style="font-size: 4rem; color: #4F64FF; margin-top: 20vh;">Brix</h1>
             <p style="color: #ccc;">The New and Improved.</p>
         </div>
 
@@ -178,25 +213,65 @@
             <div class="grid-container">
                 <h2 class="grid-title">Game Library</h2>
                 <div class="grid-wrapper">
-                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/retrobowl.html')">
-                        <img src="https://picsum.photos/600/300?random=11" class="card-image">
-                        <div class="card-info"><b>Retro Bowl</b></div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/10minutestilldawn.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/10-minutes-till-dawn_1x1.jpeg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>10 Minutes Till Dawn</b></div>
                     </div>
-                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/slope.html')">
-                        <img src="https://picsum.photos/600/300?random=12" class="card-image">
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/12minibattles.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/12minibattles.png" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>12 Mini Batles</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/1on1soccer.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/1-on-1-soccer.jpg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>1 On 1 Soccer</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/1on1tennis.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/1on1tennis.jpg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>1 On 1 Tennis</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/1v1.lol.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/1v1%20loo.jpeg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>1v1.lol</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/2048.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/2048logo.jpeg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>2048</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/3Dflightsimulator.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/3dflight.jpeg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>3D Flight Simulator</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/agariolite.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/agario.png" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>Agar.io</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/ageofwar.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/ageofwar.jpeg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>Age of War</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/ageofwar2.html')">
+                        <img src="https://raw.githubusercontent.com/xxuep/games/main/images/ageofwar2.jpg" class="card-image" style="aspect-ratio: 2/1;">
+                        <div class="card-info"><b>Age of War 2</b></div>
+                    </div>
+                    <div class="card" onclick="launchGame('https://raw.githack.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/slope.html')">
+                        <img src="https://picsum.photos/600/300?random=12" class="card-image" style="aspect-ratio: 2/1;">
                         <div class="card-info"><b>Slope</b></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="view-movies" class="view-section">
+        <div id="view-music" class="view-section">
             <div class="grid-container">
-                <h2 class="grid-title">Movie Library</h2>
+                <h2 class="grid-title">Music Library</h2>
                 <div class="grid-wrapper">
-                    <div class="card" onclick="launchMovie('https://github.com/intel-iot-devkit/sample-videos/raw/master/classroom.mp4')">
-                        <img src="https://picsum.photos/600/300?random=20" class="card-image">
-                        <div class="card-info"><b>Sample Movie 1</b></div>
+                    <div class="card" onclick="openAlbum('album1')">
+                        <img src="https://picsum.photos/400/400?random=1" class="card-image">
+                        <div class="card-info"><b>LoFi Beats</b></div>
+                    </div>
+                    <div class="card" onclick="openAlbum('album2')">
+                        <img src="https://picsum.photos/400/400?random=2" class="card-image">
+                        <div class="card-info"><b>Phonk Mix</b></div>
                     </div>
                 </div>
             </div>
@@ -205,13 +280,16 @@
 
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal-window">
-            <button class="close-btn" onclick="closeAll()">X</button>
+            <div class="window-controls">
+                <button class="win-btn min-btn" onclick="minimizeModal()">-</button>
+                <button class="win-btn close-btn" onclick="closeModal()">X</button>
+            </div>
             <div id="modal-body" style="width:100%; height:100%;"></div>
         </div>
     </div>
 
     <script>
-        // --- SETUP LOGIC ---
+        // --- SETUP WIZARD ---
         let selectedFavicon = '';
         if(localStorage.getItem('brix-setup')) {
             document.getElementById('setup-overlay').style.display = 'none';
@@ -247,11 +325,8 @@
             let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
             link.type = 'image/x-icon'; link.rel = 'shortcut icon'; link.href = data.icon;
             document.getElementsByTagName('head')[0].appendChild(link);
-            
             window.addEventListener('keydown', (e) => {
-                if(e.shiftKey && e.key.toUpperCase() === data.panicKey) {
-                    window.location.href = data.panicUrl;
-                }
+                if(e.shiftKey && e.key.toUpperCase() === data.panicKey) window.location.href = data.panicUrl;
             });
         }
 
@@ -263,88 +338,118 @@
             document.getElementById('btn-' + tab).classList.add('active');
         }
 
+        // --- GAME LAUNCHER (FIXED CONNECTION) ---
         const modal = document.getElementById('modal-overlay');
         const body = document.getElementById('modal-body');
 
-        // --- GAME LAUNCHER (FIT TO WINDOW) ---
         function launchGame(targetUrl) {
-            modal.style.display = 'flex';
-            const iframe = document.createElement('iframe');
-            
-            const loadingHTML = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body { background: #000; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-                        #game-frame { width: 100%; height: 100%; border: none; }
-                    </style>
-                </head>
-                <body>
-                    <div id="loader">Loading Game Engine...</div>
-                    <script>
-                        (async () => {
-                            try {
-                                const response = await fetch("${targetUrl}");
-                                let html = await response.text();
-                                const baseUrl = "${targetUrl}".substring(0, "${targetUrl}".lastIndexOf("/") + 1);
-                                
-                                // Auto-fit CSS Injection
-                                const fitStyle = \`
-                                    <style>
-                                        body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; display:flex; justify-content:center; align-items:center; background:#000; }
-                                        canvas, iframe, embed { max-width: 100vw !important; max-height: 100vh !important; object-fit: contain !important; }
-                                    </style>
-                                \`;
+            // Pause music to prevent audio overlap
+            if(!audioPlayer.paused) audioPlayer.pause();
+            updateMiniPlayerState(false);
 
-                                html = html.replace("<head>", '<head><base href="' + baseUrl + '">' + fitStyle);
-                                document.open();
-                                document.write(html);
-                                document.close();
-                            } catch (err) {
-                                document.body.innerHTML = "Resource Blocked.";
-                            }
-                        })();
-                    <\/script>
-                </body>
-                </html>
-            `;
+            modal.style.display = 'flex';
+            body.innerHTML = ''; 
             
-            iframe.srcdoc = loadingHTML;
+            // Using raw.githack.com instead of raw.githubusercontent.com 
+            // This bypasses the security block while loading the EXACT same file.
+            const fixedUrl = targetUrl.replace('raw.githubusercontent.com', 'raw.githack.com');
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = fixedUrl;
+            iframe.className = 'game-iframe';
             body.appendChild(iframe);
         }
 
-        // --- MOVIE LAUNCHER ---
-        function launchMovie(url) {
+        // --- MUSIC SYSTEM ---
+        const musicData = {
+            'album1': {
+                title: "LoFi Beats",
+                art: "https://picsum.photos/400/400?random=1",
+                songs: [
+                    { title: "Chill Vibes", url: "https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/master/sample.mp3" },
+                    { title: "Study Time", url: "https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/master/sample.mp3" }
+                ]
+            },
+            'album2': {
+                title: "Phonk Mix",
+                art: "https://picsum.photos/400/400?random=2",
+                songs: [
+                    { title: "Drift King", url: "https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/master/sample.mp3" }
+                ]
+            }
+        };
+
+        let currentAlbumId = null;
+        let currentSongIndex = 0;
+        let audioPlayer = new Audio();
+        let isMusicModalOpen = false;
+
+        function openAlbum(albumId) {
+            isMusicModalOpen = true;
             modal.style.display = 'flex';
-            body.innerHTML = `
-                <div class="video-container">
-                    <video id="main-video" src="${url}"></video>
-                    <div class="video-controls">
-                        <button class="control-btn" onclick="togglePlay()"><i id="play-icon" class="fas fa-play"></i></button>
-                        <input type="range" id="seek-slider" class="slider" value="0" min="0" step="0.1">
-                        <input type="range" id="volume-slider" class="vol-slider" value="1" min="0" max="1" step="0.1">
-                    </div>
-                </div>
-            `;
-            const v = document.getElementById('main-video');
-            const seek = document.getElementById('seek-slider');
-            v.ontimeupdate = () => { if(!v.paused) seek.value = (v.currentTime / v.duration) * 100; };
-            seek.oninput = () => { v.currentTime = (seek.value / 100) * v.duration; };
-            v.play();
-            document.getElementById('play-icon').className = "fas fa-pause";
+            const album = musicData[albumId];
+            
+            let tracksHTML = '';
+            album.songs.forEach((song, index) => {
+                tracksHTML += `<div class="track-item" onclick="playSong('${albumId}', ${index})">
+                    <span>${index + 1}. ${song.title}</span>
+                    <span><i class="fas fa-play"></i></span>
+                </div>`;
+            });
+
+            body.innerHTML = `<div class="album-view">
+                <div class="album-art-large" style="background-image: url('${album.art}')"></div>
+                <div class="album-tracks"><h2>${album.title}</h2>${tracksHTML}</div>
+            </div>`;
         }
 
-        function togglePlay() {
-            const v = document.getElementById('main-video');
-            const icon = document.getElementById('play-icon');
-            if (v.paused) { v.play(); icon.className = "fas fa-pause"; }
-            else { v.pause(); icon.className = "fas fa-play"; }
+        function playSong(albumId, index) {
+            currentAlbumId = albumId;
+            currentSongIndex = index;
+            const song = musicData[albumId].songs[index];
+            audioPlayer.src = song.url;
+            audioPlayer.play();
+            updateMiniPlayer();
+            updateMiniPlayerState(true);
         }
 
-        function closeAll() {
+        function updateMiniPlayer() {
+            const mini = document.getElementById('mini-player');
+            mini.style.display = 'block';
+            mini.style.backgroundImage = `url('${musicData[currentAlbumId].art}')`;
+        }
+
+        function toggleMusic() {
+            if(audioPlayer.paused) { audioPlayer.play(); updateMiniPlayerState(true); }
+            else { audioPlayer.pause(); updateMiniPlayerState(false); }
+        }
+
+        function updateMiniPlayerState(isPlaying) {
+            document.getElementById('mini-play-btn').className = isPlaying ? "fas fa-pause mini-btn" : "fas fa-play mini-btn";
+        }
+
+        function nextSong() {
+            if(!currentAlbumId) return;
+            currentSongIndex = (currentSongIndex + 1) % musicData[currentAlbumId].songs.length;
+            playSong(currentAlbumId, currentSongIndex);
+        }
+
+        function prevSong() {
+            if(!currentAlbumId) return;
+            currentSongIndex = (currentSongIndex - 1 + musicData[currentAlbumId].songs.length) % musicData[currentAlbumId].songs.length;
+            playSong(currentAlbumId, currentSongIndex);
+        }
+
+        audioPlayer.onended = nextSong;
+
+        function minimizeModal() { modal.style.display = 'none'; isMusicModalOpen = false; }
+
+        function closeModal() {
+            audioPlayer.pause();
+            document.getElementById('mini-player').style.display = 'none';
             modal.style.display = 'none';
             body.innerHTML = '';
+            isMusicModalOpen = false;
         }
 
         // --- PARTICLES ---
