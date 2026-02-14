@@ -468,7 +468,7 @@
         const body = document.getElementById('modal-body');
 
 async function launchGame(gameUrl) {
-    if(!audioPlayer.paused) audioPlayer.pause();
+    if (!audioPlayer.paused) audioPlayer.pause();
     updateMiniPlayerState(false);
 
     modal.style.display = 'flex';
@@ -476,19 +476,19 @@ async function launchGame(gameUrl) {
 
     const iframe = document.createElement('iframe');
     iframe.className = 'game-iframe';
-    
+
     // FIX: Remove or set proper sandbox permissions
     // Removing it entirely is best for compatibility with diverse games
-    iframe.removeAttribute('sandbox'); 
+    iframe.removeAttribute('sandbox');
     iframe.setAttribute('allow', 'autoplay; fullscreen; keyboard-attribute; microphone');
 
     try {
         const r = await fetch(gameUrl, { mode: 'cors' });
-        if(!r.ok) throw new Error('fetch failed');
+        if (!r.ok) throw new Error('fetch failed');
         const html = await r.text();
-        
+
         // Use the base tag to fix relative links for styles/images/scripts
-        const baseHref = gameUrl.replace(/\/[^\/]*$/,'/');
+        const baseHref = gameUrl.replace(/\/[^\/]*$/, '/');
         iframe.srcdoc = `<base href="${baseHref}">${html}`;
     } catch (e) {
         console.warn('Fetch failed, falling back to direct source:', e);
